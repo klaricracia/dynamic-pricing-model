@@ -1,4 +1,4 @@
-# Dynamic Pricing Engine — ML-Powered Price Optimisation
+# Dynamic Pricing Engine — ML-Powered Price Optimization
 
 > **CASE STUDY** · Machine Learning · Price Optimisation · Python · XGBoost
 
