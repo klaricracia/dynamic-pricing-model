@@ -1,0 +1,42 @@
+{
+  "model_metrics": {
+    "MAE": 3.39,
+    "RMSE": 4.733,
+    "R2": 0.9483,
+    "MAPE": 11.54
+  },
+  "top_features": [
+    {
+      "feature": "demand_rolling_14d_avg",
+      "importance": 0.5236554145812988
+    },
+    {
+      "feature": "base_daily_demand",
+      "importance": 0.16160184144973755
+    },
+    {
+      "feature": "demand_lag_14d",
+      "importance": 0.055866315960884094
+    },
+    {
+      "feature": "demand_lag_28d",
+      "importance": 0.05463969334959984
+    },
+    {
+      "feature": "is_weekend",
+      "importance": 0.04256337136030197
+    },
+    {
+      "feature": "price_vs_base",
+      "importance": 0.039913106709718704
+    },
+    {
+      "feature": "demand_lag_7d",
+      "importance": 0.02283967286348343
+    },
+    {
+      "feature": "day_of_week",
+      "importance": 0.018744399771094322
+    }
+  ]
+}
