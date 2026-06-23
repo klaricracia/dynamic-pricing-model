@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dynamic Pricing Engine — Klarissa Artavia</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Arimo:wght@400;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --blue:#4100F5;--fuchsia:#F037A5;--tangerine:#FF4632;
+      --black:#191414;--surface:#1E1A1A;--surface2:#252020;
+      --text:#F5F5F0;--muted:#9E9A9A;
+      --grad:linear-gradient(135deg,#4100F5,#F037A5,#FF4632);
+    }
+    html,body{background:var(--black);color:var(--text);font-family:'Arimo',sans-serif;min-height:100vh}
+
+    header{background:var(--black);border-bottom:1px solid #2a2525;padding:20px 40px;display:flex;align-items:center;justify-content:space-between}
+    .logo-pill{background:var(--grad);border-radius:8px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px;color:#fff;flex-shrink:0}
+    .header-title h1{font-weight:900;font-size:18px;letter-spacing:-0.03em}
+    .header-title p{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--blue);letter-spacing:0.2em;text-transform:uppercase;margin-top:2px}
+    .badge{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.15em;padding:4px 10px;border-radius:4px;text-transform:uppercase}
+    .badge-blue{background:var(--blue);color:#fff}
+    .badge-outline{border:1px solid #3a3535;color:var(--muted)}
+
+    /* Toggle */
+    .toggle-wrap{display:flex;align-items:center;gap:0;background:var(--surface2);border:1px solid #2a2525;border-radius:6px;overflow:hidden}
+    .toggle-btn{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.15em;text-transform:uppercase;padding:7px 16px;cursor:pointer;border:none;background:transparent;color:var(--muted);transition:all .2s}
+    .toggle-btn.active{background:var(--blue);color:#fff}
+
+    .hero{background:var(--grad);padding:48px 40px 40px;position:relative;overflow:hidden}
+    .hero::before{content:'';position:absolute;right:-60px;top:-60px;width:300px;height:300px;border-radius:50%;background:rgba(255,255,255,0.07)}
+    .hero::after{content:'';position:absolute;right:100px;bottom:-80px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,0.05)}
+    .hero-label{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.25em;text-transform:uppercase;color:rgba(255,255,255,0.75);margin-bottom:12px}
+    .hero h2{font-weight:900;font-size:clamp(26px,4vw,42px);letter-spacing:-0.045em;line-height:1.05;color:#fff;max-width:640px}
+    .hero p{margin-top:12px;font-size:15px;color:rgba(255,255,255,0.8);max-width:560px;line-height:1.5}
+
+    .kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:#2a2525;border-bottom:1px solid #2a2525}
+    .kpi-card{background:var(--surface);padding:24px 28px}
+    .kpi-label{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+    .kpi-value{font-weight:900;font-size:26px;letter-spacing:-0.04em;line-height:1}
+    .kpi-sub{font-size:11px;color:var(--muted);margin-top:4px}
+    .a-grad .kpi-value{background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .a-blue .kpi-value{color:var(--blue)}
+    .a-fuch .kpi-value{color:var(--fuchsia)}
+    .a-tang .kpi-value{color:var(--tangerine)}
+    .a-green .kpi-value{color:#00C48C}
+
+    .main{padding:32px 40px;display:grid;grid-template-columns:1fr 1fr;gap:24px}
+    .full{grid-column:1/-1}
+    .card{background:var(--surface);border-radius:12px;border:1px solid #2a2525;padding:28px}
+    .card-sub{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:var(--blue);margin-bottom:4px}
+    .card-title{font-weight:900;font-size:16px;letter-spacing:-0.03em;margin-bottom:20px}
+    .card-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px}
+
+    /* Recommendation table */
+    table{width:100%;border-collapse:collapse}
+    th{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);text-align:left;padding:0 12px 12px 0;border-bottom:1px solid #2a2525;font-weight:500}
+    td{padding:11px 12px 11px 0;font-size:13px;border-bottom:1px solid #1e1a1a;vertical-align:middle}
+    tr:last-child td{border-bottom:none}
+    .action-pill{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.1em;padding:3px 8px;border-radius:3px;text-transform:uppercase;white-space:nowrap}
+    .raise{background:#4100F522;color:#4100F5;border:1px solid #4100F544}
+    .lower{background:#FF463222;color:#FF4632;border:1px solid #FF463244}
+    .hold{background:#9E9A9A22;color:#9E9A9A;border:1px solid #9E9A9A44}
+
+    /* Elasticity viz */
+    .elasticity-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+    .elast-card{background:var(--surface2);border:1px solid #2a2525;border-radius:8px;padding:16px;text-align:center}
+    .elast-cat{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+    .elast-val{font-weight:900;font-size:22px;letter-spacing:-0.04em}
+    .elast-desc{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.4}
+
+    footer{padding:28px 40px;border-top:1px solid #2a2525;display:flex;align-items:center;justify-content:space-between}
+    footer p{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted)}
+    footer a{color:var(--blue);text-decoration:none}
+
+    @media(max-width:1000px){.kpi-row{grid-template-columns:1fr 1fr}.main{grid-template-columns:1fr;padding:20px}.elasticity-grid{grid-template-columns:1fr 1fr}}
+  </style>
+</head>
+<body>
+
+<header>
+  <div style="display:flex;align-items:center;gap:14px">
+    <div class="logo-pill">KA</div>
+    <div class="header-title">
+      <h1>Klarissa Artavia</h1>
+      <p>Data &amp; AI Strategy · AI Transformation</p>
+    </div>
+  </div>
+  <div style="display:flex;gap:10px;align-items:center">
+    <div class="toggle-wrap">
+      <button class="toggle-btn active" id="btn-margin" onclick="switchObjective('margin')">Maximise Margin</button>
+      <button class="toggle-btn" id="btn-revenue" onclick="switchObjective('revenue')">Maximise Revenue</button>
+    </div>
+    <span class="badge badge-blue">PROJECT LAUNCH</span>
+    <span class="badge badge-outline">XGBoost · scipy · ML</span>
+  </div>
+</header>
+
+<div class="hero">
+  <div class="hero-label">Case Study · ML Pricing · Retail</div>
+  <h2>Dynamic Pricing Engine</h2>
+  <p>XGBoost demand model trained on 18,250 observations — predicts demand at any price point, then optimises for margin or revenue using constrained mathematical optimisation.</p>
+</div>
+
+<div class="kpi-row">
+  <div class="kpi-card a-grad">
+    <div class="kpi-label">Model R²</div>
+    <div class="kpi-value">0.9483</div>
+    <div class="kpi-sub">Demand prediction accuracy</div>
+  </div>
+  <div class="kpi-card a-blue">
+    <div class="kpi-label">Products Analysed</div>
+    <div class="kpi-value">50</div>
+    <div class="kpi-sub">Across 5 categories</div>
+  </div>
+  <div class="kpi-card a-fuch" id="kpi-raise">
+    <div class="kpi-label">Raise Prices</div>
+    <div class="kpi-value">42</div>
+    <div class="kpi-sub">Products priced below optimal</div>
+  </div>
+  <div class="kpi-card a-tang" id="kpi-uplift">
+    <div class="kpi-label">Avg Margin Uplift</div>
+    <div class="kpi-value">+43.6%</div>
+    <div class="kpi-sub">Across all recommendations</div>
+  </div>
+  <div class="kpi-card a-green" id="kpi-max">
+    <div class="kpi-label">Max Uplift</div>
+    <div class="kpi-value">+102.1%</div>
+    <div class="kpi-sub">Single product opportunity</div>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- Recommendations table -->
+  <div class="card full">
+    <div class="card-header">
+      <div>
+        <div class="card-sub">ML Output</div>
+        <div class="card-title" id="table-title">Price Recommendations — Maximise Margin</div>
+      </div>
+      <span class="badge badge-outline" style="margin-top:4px">XGBoost + scipy.optimize</span>
+    </div>
+    <div style="overflow-x:auto">
+      <table>
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th>Category</th>
+            <th>Current Price</th>
+            <th>Optimal Price</th>
+            <th>Change</th>
+            <th>vs Competitor</th>
+            <th id="th-uplift">Margin Uplift</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="recTable"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Uplift by category -->
+  <div class="card">
+    <div class="card-sub">By Category</div>
+    <div class="card-title" id="cat-chart-title">Avg Margin Uplift % by Category</div>
+    <div style="position:relative;height:280px">
+      <canvas id="catChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Price change distribution -->
+  <div class="card">
+    <div class="card-sub">Price Movement</div>
+    <div class="card-title">Recommended Price Change Distribution</div>
+    <div style="position:relative;height:280px">
+      <canvas id="priceChangeChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Elasticity by category -->
+  <div class="card full">
+    <div class="card-sub">Price Elasticity</div>
+    <div class="card-title">Estimated Demand Elasticity by Category</div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.6">
+      Elasticity measures how demand changes with price. A value of −2.1 means a 10% price increase reduces demand by 21%.
+      Electronics has the highest elasticity — buyers shop around. Beauty has the lowest — customers value brand over price.
+    </p>
+    <div class="elasticity-grid">
+      <div class="elast-card"><div class="elast-cat">Electronics</div><div class="elast-val" style="color:var(--tangerine)">−2.1</div><div class="elast-desc">Highly price-sensitive. Competitive market.</div></div>
+      <div class="elast-card"><div class="elast-cat">Sports</div><div class="elast-val" style="color:var(--fuchsia)">−1.8</div><div class="elast-desc">Moderate sensitivity. Brand matters.</div></div>
+      <div class="elast-card"><div class="elast-cat">Apparel</div><div class="elast-val" style="color:var(--blue)">−1.6</div><div class="elast-desc">Seasonal patterns drive more than price.</div></div>
+      <div class="elast-card"><div class="elast-cat">Beauty</div><div class="elast-val" style="color:#9B59B6">−1.4</div><div class="elast-desc">Low sensitivity. Loyalty-driven.</div></div>
+      <div class="elast-card"><div class="elast-cat">Home &amp; Garden</div><div class="elast-val" style="color:#00C48C">−1.2</div><div class="elast-desc">Least sensitive. Need-based purchases.</div></div>
+    </div>
+  </div>
+
+  <!-- Feature importance -->
+  <div class="card full">
+    <div class="card-sub">Model Interpretability</div>
+    <div class="card-title">XGBoost Feature Importance — What Drives Demand?</div>
+    <div style="position:relative;height:280px">
+      <canvas id="featChart"></canvas>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <p>Klarissa Artavia · <a href="https://github.com/klaricracia" target="_blank">github.com/klaricracia</a> · <a href="https://www.linkedin.com/in/klariartavia/" target="_blank">linkedin.com/in/klariartavia</a></p>
+  <p>XGBoost · scikit-learn · scipy.optimize · Python · 2024</p>
+</footer>
+
+<script>
+Chart.defaults.font.family = "'Arimo', sans-serif";
+Chart.defaults.color = '#9E9A9A';
+
+// ── Data ──────────────────────────────────────────────────────────────────────
+const RECS = {
+  margin: [
+    {name:"Electronics 07",cat:"Electronics",curr:138.01,opt:215.43,chg:56.1,comp:148.91,uplift:102.1,action:"RAISE"},
+    {name:"Electronics 02",cat:"Electronics",curr:125.52,opt:192.81,chg:53.6,comp:143.85,uplift:86.6,action:"RAISE"},
+    {name:"Electronics 09",cat:"Electronics",curr:442.87,opt:612.19,chg:38.2,comp:434.87,uplift:86.5,action:"RAISE"},
+    {name:"Electronics 03",cat:"Electronics",curr:313.46,opt:423.37,chg:35.1,comp:287.63,uplift:83.2,action:"RAISE"},
+    {name:"Electronics 01",cat:"Electronics",curr:235.48,opt:302.64,chg:28.5,comp:226.10,uplift:80.3,action:"RAISE"},
+    {name:"Home & Garden 03",cat:"Home & Garden",curr:45.20,opt:62.40,chg:38.1,comp:48.50,uplift:74.2,action:"RAISE"},
+    {name:"Sports 07",cat:"Sports",curr:89.30,opt:118.60,chg:32.8,comp:94.20,uplift:68.1,action:"RAISE"},
+    {name:"Apparel 05",cat:"Apparel",curr:67.80,opt:88.40,chg:30.4,comp:71.30,uplift:52.3,action:"RAISE"},
+    {name:"Beauty 02",cat:"Beauty",curr:34.50,opt:41.20,chg:19.4,comp:36.80,uplift:38.7,action:"RAISE"},
+    {name:"Apparel 09",cat:"Apparel",curr:95.60,opt:82.10,chg:-14.1,comp:88.40,uplift:-12.4,action:"LOWER"},
+    {name:"Beauty 08",cat:"Beauty",curr:28.90,opt:24.70,chg:-14.5,comp:31.20,uplift:-8.2,action:"LOWER"},
+    {name:"Electronics 05",cat:"Electronics",curr:259.93,opt:330.61,chg:27.2,comp:251.40,uplift:58.9,action:"RAISE"},
+  ],
+  revenue: [
+    {name:"Electronics 07",cat:"Electronics",curr:138.01,opt:112.30,chg:-18.6,comp:148.91,uplift:28.4,action:"LOWER"},
+    {name:"Electronics 02",cat:"Electronics",curr:125.52,opt:98.70,chg:-21.4,comp:143.85,uplift:36.8,action:"LOWER"},
+    {name:"Electronics 09",cat:"Electronics",curr:442.87,opt:371.20,chg:-16.2,comp:434.87,uplift:22.1,action:"LOWER"},
+    {name:"Home & Garden 03",cat:"Home & Garden",curr:45.20,opt:38.40,chg:-15.0,comp:48.50,uplift:18.9,action:"LOWER"},
+    {name:"Sports 07",cat:"Sports",curr:89.30,opt:74.60,chg:-16.5,comp:94.20,uplift:24.3,action:"LOWER"},
+    {name:"Apparel 05",cat:"Apparel",curr:67.80,opt:56.20,chg:-17.1,comp:71.30,uplift:20.7,action:"LOWER"},
+    {name:"Beauty 02",cat:"Beauty",curr:34.50,opt:29.80,chg:-13.6,comp:36.80,uplift:12.4,action:"LOWER"},
+    {name:"Apparel 09",cat:"Apparel",curr:95.60,opt:98.20,chg:2.7,comp:88.40,uplift:3.1,action:"RAISE"},
+    {name:"Beauty 08",cat:"Beauty",curr:28.90,opt:29.40,chg:1.7,comp:31.20,uplift:2.8,action:"RAISE"},
+    {name:"Electronics 05",cat:"Electronics",curr:259.93,opt:218.40,chg:-16.0,comp:251.40,uplift:19.6,action:"LOWER"},
+    {name:"Electronics 01",cat:"Electronics",curr:235.48,opt:194.20,chg:-17.5,comp:226.10,uplift:21.3,action:"LOWER"},
+    {name:"Sports 03",cat:"Sports",curr:142.60,opt:119.80,chg:-16.0,comp:138.70,uplift:17.8,action:"LOWER"},
+  ]
+};
+
+const CAT_DATA = {
+  margin:  {labels:["Electronics","Sports","Home & Garden","Apparel","Beauty"], values:[74.2,34.2,33.6,24.4,13.9], colors:["#FF4632","#F037A5","#4100F5","#9B59B6","#00C48C"]},
+  revenue: {labels:["Electronics","Sports","Home & Garden","Apparel","Beauty"], values:[25.6,17.4,16.2,12.1,8.4], colors:["#FF4632","#F037A5","#4100F5","#9B59B6","#00C48C"]},
+};
+
+const KPI_DATA = {
+  margin:  {raise:42, uplift:"+43.6%", max:"+102.1%", upliftLabel:"Avg Margin Uplift", maxLabel:"Max Margin Uplift"},
+  revenue: {raise:46, uplift:"+13.9%", max:"+36.8%",  upliftLabel:"Avg Revenue Uplift", maxLabel:"Max Revenue Uplift"},
+};
+
+const FEATURES = [
+  {name:"demand_rolling_14d_avg", imp:0.28},
+  {name:"demand_lag_7d",          imp:0.19},
+  {name:"price_vs_avg_comp",      imp:0.14},
+  {name:"price_vs_base",          imp:0.11},
+  {name:"seasonality / month",    imp:0.09},
+  {name:"base_daily_demand",      imp:0.08},
+  {name:"price",                  imp:0.06},
+  {name:"category",               imp:0.05},
+];
+
+let currentObj = "margin";
+let catChartInst, priceChartInst, featChartInst;
+
+function buildTable(obj){
+  const tbody = document.getElementById("recTable");
+  tbody.innerHTML = "";
+  RECS[obj].forEach(r=>{
+    const isRaise = r.action==="RAISE";
+    const isLower = r.action==="LOWER";
+    const upliftColor = r.uplift>0 ? "#00C48C" : "#FF4632";
+    const vsComp = ((r.opt - r.comp)/r.comp*100).toFixed(1);
+    const vsCompColor = parseFloat(vsComp) > 0 ? "#F037A5" : "#4100F5";
+    tbody.innerHTML += `
+      <tr>
+        <td style="font-weight:700">${r.name}</td>
+        <td style="color:var(--muted);font-size:12px">${r.cat}</td>
+        <td style="font-family:'JetBrains Mono',monospace;font-size:12px">$${r.curr.toFixed(2)}</td>
+        <td style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700">$${r.opt.toFixed(2)}</td>
+        <td style="font-family:'JetBrains Mono',monospace;font-size:12px;color:${isRaise?'#4100F5':'#FF4632'}">${r.chg>0?'+':''}${r.chg}%</td>
+        <td style="font-family:'JetBrains Mono',monospace;font-size:12px;color:${vsCompColor}">${parseFloat(vsComp)>0?'+':''}${vsComp}% vs avg</td>
+        <td style="font-family:'JetBrains Mono',monospace;font-size:12px;color:${upliftColor};font-weight:700">${r.uplift>0?'+':''}${r.uplift}%</td>
+        <td><span class="action-pill ${r.action.toLowerCase()}">${r.action}</span></td>
+      </tr>`;
+  });
+}
+
+function buildCatChart(obj){
+  const d = CAT_DATA[obj];
+  if(catChartInst) catChartInst.destroy();
+  catChartInst = new Chart(document.getElementById("catChart"),{
+    type:"bar",
+    data:{
+      labels:d.labels,
+      datasets:[{
+        label: obj==="margin"?"Margin Uplift %":"Revenue Uplift %",
+        data:d.values,
+        backgroundColor:d.colors,
+        borderRadius:6, borderSkipped:false,
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{backgroundColor:"#252020",titleColor:"#F5F5F0",bodyColor:"#9E9A9A",borderColor:"#3a3535",borderWidth:1,callbacks:{label:c=>`+${c.parsed.y}%`}}},
+      scales:{
+        x:{grid:{display:false},ticks:{color:"#F5F5F0",font:{size:11,weight:"700"}}},
+        y:{grid:{color:"#2a2525"},ticks:{color:"#9E9A9A",font:{family:"'JetBrains Mono',monospace",size:10},callback:v=>`+${v}%`}}
+      }
+    }
+  });
+}
+
+function buildPriceChangeChart(obj){
+  const recs = RECS[obj];
+  const bins = {">+30%":0,"+15–30%":0,"+5–15%":0,"−5–+5%":0,"−5–−15%":0,"<−15%":0};
+  recs.forEach(r=>{
+    if(r.chg>30) bins[">+30%"]++;
+    else if(r.chg>15) bins["+15–30%"]++;
+    else if(r.chg>5) bins["+5–15%"]++;
+    else if(r.chg>=-5) bins["−5–+5%"]++;
+    else if(r.chg>=-15) bins["−5–−15%"]++;
+    else bins["<−15%"]++;
+  });
+  if(priceChartInst) priceChartInst.destroy();
+  priceChartInst = new Chart(document.getElementById("priceChangeChart"),{
+    type:"bar",
+    data:{
+      labels:Object.keys(bins),
+      datasets:[{
+        label:"Products",
+        data:Object.values(bins),
+        backgroundColor:["#4100F5","#6B30FA","#9B59B6","#9E9A9A","#F037A5","#FF4632"],
+        borderRadius:6,borderSkipped:false,
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{backgroundColor:"#252020",titleColor:"#F5F5F0",bodyColor:"#9E9A9A",borderColor:"#3a3535",borderWidth:1,callbacks:{label:c=>`${c.parsed.y} products`}}},
+      scales:{
+        x:{grid:{display:false},ticks:{color:"#F5F5F0",font:{size:10,weight:"700"}}},
+        y:{grid:{color:"#2a2525"},ticks:{color:"#9E9A9A",font:{family:"'JetBrains Mono',monospace",size:10},stepSize:1}}
+      }
+    }
+  });
+}
+
+function buildFeatChart(){
+  if(featChartInst) return;
+  featChartInst = new Chart(document.getElementById("featChart"),{
+    type:"bar",
+    data:{
+      labels:FEATURES.map(f=>f.name),
+      datasets:[{
+        label:"Importance",
+        data:FEATURES.map(f=>f.imp),
+        backgroundColor:["#4100F5","#5520F8","#6B30FA","#8040FC","#9650FE","#F037A5","#FF4632","#FF6B35"],
+        borderRadius:4,borderSkipped:false,
+      }]
+    },
+    options:{
+      indexAxis:"y",responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{backgroundColor:"#252020",titleColor:"#F5F5F0",bodyColor:"#9E9A9A",borderColor:"#3a3535",borderWidth:1,callbacks:{label:c=>`Importance: ${(c.parsed.x*100).toFixed(0)}%`}}},
+      scales:{
+        x:{grid:{color:"#2a2525"},ticks:{color:"#9E9A9A",font:{family:"'JetBrains Mono',monospace",size:10},callback:v=>`${(v*100).toFixed(0)}%`}},
+        y:{grid:{display:false},ticks:{color:"#F5F5F0",font:{size:11,weight:"700"}}}
+      }
+    }
+  });
+}
+
+function switchObjective(obj){
+  currentObj = obj;
+  document.getElementById("btn-margin").classList.toggle("active", obj==="margin");
+  document.getElementById("btn-revenue").classList.toggle("active", obj==="revenue");
+  document.getElementById("table-title").textContent = `Price Recommendations — Maximise ${obj.charAt(0).toUpperCase()+obj.slice(1)}`;
+  document.getElementById("cat-chart-title").textContent = `Avg ${obj.charAt(0).toUpperCase()+obj.slice(1)} Uplift % by Category`;
+  document.getElementById("th-uplift").textContent = obj==="margin"?"Margin Uplift":"Revenue Uplift";
+
+  const kpi = KPI_DATA[obj];
+  document.querySelector("#kpi-raise .kpi-value").textContent = kpi.raise;
+  document.querySelector("#kpi-uplift .kpi-value").textContent = kpi.uplift;
+  document.querySelector("#kpi-uplift .kpi-label").textContent = kpi.upliftLabel;
+  document.querySelector("#kpi-max .kpi-value").textContent = kpi.max;
+  document.querySelector("#kpi-max .kpi-label").textContent = kpi.maxLabel;
+
+  buildTable(obj);
+  buildCatChart(obj);
+  buildPriceChangeChart(obj);
+}
+
+// Init
+switchObjective("margin");
+buildFeatChart();
+</script>
+</body>
+</html>
